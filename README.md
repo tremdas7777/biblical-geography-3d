@@ -13,7 +13,7 @@ Abra http://localhost:8090
 
 ## Idiomas (EN / ES)
 
-O visitante alterna entre **English** e **Español** pelo botão fixo no canto superior direito. A preferência fica salva no navegador (`localStorage`).
+O visitante alterna entre **English** e **Español** pelo botão fixo no canto superior direito. O idioma padrão é **Español**; a preferência fica salva no navegador (`localStorage`).
 
 - Textos: `i18n.js`
 - Imagens em espanhol: `assets/es/` — recriacoes de alta fidelidade a partir dos originais EN, com todo o texto traduzido

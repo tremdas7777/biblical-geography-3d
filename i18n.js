@@ -413,8 +413,7 @@ window.I18N = {
   function detectLang() {
     var saved = localStorage.getItem(LANG_KEY);
     if (saved === 'en' || saved === 'es') return saved;
-    var browser = (navigator.language || 'en').toLowerCase();
-    return browser.indexOf('es') === 0 ? 'es' : 'en';
+    return 'es';
   }
 
   window.getCurrentLang = detectLang;
