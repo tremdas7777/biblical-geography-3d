@@ -1,12 +1,11 @@
-# Deploy no Render: https://render.com
-# New → Web Service → conecte o repo → Root Directory: server
+# Deploy: https://dashboard.render.com → New → Blueprint
+# Ou: New → Web Service → repo completo (sem Root Directory)
 services:
   - type: web
     name: bg3d-analytics
     runtime: node
-    rootDir: server
-    buildCommand: npm install
-    startCommand: npm start
+    buildCommand: cd server && npm install
+    startCommand: cd server && npm start
     envVars:
       - key: ADMIN_PASSWORD
         generateValue: true
