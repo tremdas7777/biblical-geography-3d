@@ -454,7 +454,10 @@ window.I18N = {
     document.querySelectorAll('[data-i18n-img]').forEach(function (el) {
       var key = el.getAttribute('data-i18n-img');
       var src = getNested(t, 'images.' + key);
-      if (src) el.setAttribute('src', src);
+      if (src) {
+        if (src.charAt(0) !== '/') src = '/' + src;
+        el.setAttribute('src', src);
+      }
     });
 
     document.querySelectorAll('.lang-btn').forEach(function (btn) {
