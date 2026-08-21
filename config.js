@@ -17,7 +17,13 @@ window.FUNNEL_CONFIG = {
   // Contagem regressiva da oferta, em horas
   countdownHours: 24,
 
-  // API de analytics (vazio = mesmo dominio quando usar `npm start` no /server)
-  // Em GitHub Pages, aponte para seu servidor: "https://seu-api.onrender.com"
-  analyticsApi: ""
+  // API Node local/Render (vazio = tenta Supabase ou mesmo domínio)
+  analyticsApi: "",
+
+  // Lovable Cloud / Supabase (obtenha em Settings → Cloud no Lovable)
+  supabaseUrl: "",
+  supabaseAnonKey: "",
+
+  // E-mail do usuário admin criado no Supabase Auth
+  adminEmail: "admin@thebiblicalgeography.com"
 };

@@ -17,8 +17,17 @@
     <p>Biblical Geography 3D — Analytics & Live View</p>
     <input type="password" id="login-password" placeholder="Senha" autocomplete="current-password" required />
     <button type="submit">Entrar</button>
-    <p class="login-hint">Senha padrão: <code>admin123</code> (altere via <code>ADMIN_PASSWORD</code>)</p>
+    <p class="login-hint" id="login-hint">Senha padrão: <code>admin123</code> (Node local) ou Supabase Auth (Lovable)</p>
   </form>
+  <div id="setup-hint" class="setup-hint hidden">
+    <h3>Configurar Lovable Cloud</h3>
+    <ol>
+      <li>No Lovable: <strong>Settings → Cloud</strong> (ativar backend)</li>
+      <li>SQL Editor: rode <code>supabase/schema.sql</code></li>
+      <li>Auth: crie usuário <code id="setup-email">admin@...</code></li>
+      <li>Em <code>config.js</code>: preencha <code>supabaseUrl</code> e <code>supabaseAnonKey</code></li>
+    </ol>
+  </div>
 </div>
 
 <div id="app" class="app hidden">
@@ -171,6 +180,9 @@
   </main>
 </div>
 
+<script src="/config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-api.js"></script>
 <script src="admin.js"></script>
 </body>
 </html>

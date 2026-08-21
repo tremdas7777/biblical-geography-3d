@@ -1,4 +1,7 @@
 (function () {
+  var cfg = window.FUNNEL_CONFIG || {};
+  var sb = window.BG3DSupabaseAdmin;
+  var useSupabase = sb && sb.isConfigured && sb.isConfigured();
   var TOKEN_KEY = 'bg3d_admin_token';
   var period = '24h';
   var view = 'dashboard';
@@ -38,14 +41,26 @@
     });
   }
 
+  function dataOverview(p) { return useSupabase ? sb.overview(p) : api('/api/admin/overview?period=' + encodeURIComponent(p)); }
+  function dataFunnel(p) { return useSupabase ? sb.funnel(p) : api('/api/admin/funnel?period=' + encodeURIComponent(p)); }
+  function dataTimeline(p) { return useSupabase ? sb.timeline(p) : api('/api/admin/timeline?period=' + encodeURIComponent(p)); }
+  function dataBreakdown(p) { return useSupabase ? sb.breakdown(p) : api('/api/admin/breakdown?period=' + encodeURIComponent(p)); }
+  function dataLive() { return useSupabase ? sb.live() : api('/api/admin/live').then(function (d) { return { sessions: d.sessions || d, stats: d.stats || {} }; }); }
+  function dataAnalytics(p) { return useSupabase ? sb.analytics(p) : api('/api/admin/analytics?period=' + encodeURIComponent(p)); }
+  function dataSessions(p) { return useSupabase ? sb.sessions(p) : api('/api/admin/sessions?period=' + encodeURIComponent(p)); }
+  function dataCarts(p) { return useSupabase ? sb.carts(p) : api('/api/admin/carts?period=' + encodeURIComponent(p)); }
+  function dataEvents(limit) { return useSupabase ? sb.recentEvents(limit) : api('/api/admin/events?limit=' + limit); }
+
   function fmtTime(ts) {
-    return new Date(ts).toLocaleString('pt-BR', {
+    var n = typeof ts === 'string' ? new Date(ts).getTime() : ts;
+    return new Date(n).toLocaleString('pt-BR', {
       day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit'
     });
   }
 
   function fmtAgo(ts) {
-    var s = Math.round((Date.now() - ts) / 1000);
+    var t = typeof ts === 'string' ? new Date(ts).getTime() : ts;
+    var s = Math.round((Date.now() - t) / 1000);
     if (s < 60) return s + 's atrás';
     if (s < 3600) return Math.floor(s / 60) + 'min atrás';
     return Math.floor(s / 3600) + 'h atrás';
@@ -74,12 +89,29 @@
 
   function logout() {
     localStorage.removeItem(TOKEN_KEY);
+    if (useSupabase && sb.logout) sb.logout();
     showLogin();
+  }
+
+  function showSetupHint() {
+    var el = document.getElementById('setup-hint');
+    var emailEl = document.getElementById('setup-email');
+    if (el && !useSupabase && location.hostname !== 'localhost') el.classList.remove('hidden');
+    if (emailEl && cfg.adminEmail) emailEl.textContent = cfg.adminEmail;
   }
 
   document.getElementById('login-form').addEventListener('submit', function (ev) {
     ev.preventDefault();
     var password = document.getElementById('login-password').value;
+
+    if (useSupabase) {
+      var email = cfg.adminEmail || 'admin@thebiblicalgeography.com';
+      sb.login(email, password)
+        .then(function () { showApp(); })
+        .catch(function (err) { alert(err.message || 'Senha incorreta'); });
+      return;
+    }
+
     fetch('/api/admin/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -91,7 +123,7 @@
         localStorage.setItem(TOKEN_KEY, res.data.token);
         showApp();
       })
-      .catch(function (err) { alert(err.message || 'Falha no login'); });
+      .catch(function (err) { alert(err.message || 'Falha no login — use Supabase (Lovable) ou npm start (local)'); });
   });
 
   document.getElementById('logout-btn').addEventListener('click', logout);
@@ -180,7 +212,7 @@
 
   function refreshOverview() {
     var q = '?period=' + encodeURIComponent(period);
-    return api('/api/admin/overview' + q).then(function (data) {
+    return dataOverview(period).then(function (data) {
       document.getElementById('kpi-live').textContent = data.live;
       document.getElementById('kpi-sessions').textContent = data.sessions;
       document.getElementById('kpi-engaged').textContent = data.engaged + ' (' + data.engagementRate + '%)';
@@ -203,11 +235,11 @@
 
     refreshOverview();
 
-    api('/api/admin/funnel' + q).then(function (funnel) {
+    dataFunnel(period).then(function (funnel) {
       renderFunnelRows(document.getElementById('funnel-mini'), funnel);
     });
 
-    api('/api/admin/timeline' + q).then(function (rows) {
+    dataTimeline(period).then(function (rows) {
       var buckets = {};
       rows.forEach(function (r) {
         if (!buckets[r.bucket]) buckets[r.bucket] = { page_view: 0, checkout_click: 0, section_view: 0 };
@@ -224,7 +256,7 @@
       ]);
     });
 
-    api('/api/admin/breakdown' + q).then(function (data) {
+    dataBreakdown(period).then(function (data) {
       upsertChart('chart-lang', 'doughnut', data.langs.map(function (l) { return l.lang || '?'; }), [{
         data: data.langs.map(function (l) { return l.c; }),
         backgroundColor: ['#c99a4c', '#3b82f6', '#22c55e', '#a855f7']
@@ -239,7 +271,7 @@
       }).join('') || '<p class="hint">Sem dados de origem</p>';
     });
 
-    api('/api/admin/events?limit=30').then(function (events) {
+    dataEvents(30).then(function (events) {
       document.getElementById('events-body').innerHTML = events.map(function (e) {
         return '<tr><td>' + fmtTime(e.created_at) + '</td><td><code>' + shortId(e.session_id) + '</code></td><td>' + (EVENT_LABELS[e.event_type] || e.event_type) + '</td><td>' + (e.step || '—') + '</td><td>' + (e.lang || '—') + '</td><td>' + (e.device || '—') + '</td></tr>';
       }).join('');
@@ -247,7 +279,7 @@
   }
 
   function refreshLive() {
-    api('/api/admin/live').then(function (data) {
+    dataLive().then(function (data) {
       var sessions = data.sessions || [];
       var stats = data.stats || {};
 
@@ -287,7 +319,7 @@
 
   function refreshAnalytics() {
     var q = '?period=' + encodeURIComponent(period);
-    api('/api/admin/analytics' + q).then(function (data) {
+    dataAnalytics(period).then(function (data) {
       var scroll = data.scroll || [];
       upsertChart('chart-scroll', 'bar',
         scroll.map(function (s) { return s.mark + '%'; }),
@@ -319,7 +351,7 @@
   function refreshFunnel() {
     var q = '?period=' + encodeURIComponent(period);
     refreshOverview();
-    api('/api/admin/funnel' + q).then(function (funnel) {
+    dataFunnel(period).then(function (funnel) {
       renderFunnelRows(document.getElementById('funnel-detail'), funnel);
       upsertChart('chart-funnel', 'bar', funnel.map(function (f) { return f.label; }), [{
         label: 'Leads',
@@ -334,7 +366,7 @@
 
   function refreshSessions() {
     var q = '?period=' + encodeURIComponent(period);
-    api('/api/admin/sessions' + q).then(function (sessions) {
+    dataSessions(period).then(function (sessions) {
       document.getElementById('sessions-body').innerHTML = sessions.map(function (s) {
         return '<tr><td>' + fmtTime(s.first_seen) + '</td><td><code>' + shortId(s.session_id) + '</code></td><td>' + (s.lang || '—') + '</td><td>' + (s.device || '—') + '</td><td>' + (s.max_scroll || 0) + '%</td><td>' + yesNo(s.reached_preview) + '</td><td>' + yesNo(s.reached_offer) + '</td><td>' + yesNo(s.reached_checkout) + '</td><td>' + (s.utm_source || s.referrer || 'direct') + '</td><td>' + fmtAgo(s.last_seen) + '</td></tr>';
       }).join('') || '<tr><td colspan="10">Nenhuma sessão no período</td></tr>';
@@ -344,7 +376,7 @@
   function refreshCarts() {
     var q = '?period=' + encodeURIComponent(period);
     refreshOverview();
-    api('/api/admin/carts' + q).then(function (carts) {
+    dataCarts(period).then(function (carts) {
       document.getElementById('carts-body').innerHTML = carts.map(function (c) {
         return '<tr><td>' + fmtTime(c.checkout_at) + '</td><td><code>' + shortId(c.session_id) + '</code></td><td>' + (c.lang || '—') + '</td><td>' + (c.device || '—') + '</td><td>' + (c.utm_source || c.referrer || 'direct') + '</td><td>' + (c.utm_campaign || '—') + '</td><td>' + fmtAgo(c.last_seen) + '</td></tr>';
       }).join('') || '<tr><td colspan="7">Nenhum carrinho no período</td></tr>';
@@ -361,7 +393,7 @@
     else if (view === 'carts') refreshCarts();
 
     if (view !== 'dashboard' && view !== 'live') {
-      api('/api/admin/overview?period=' + encodeURIComponent(period)).then(function (data) {
+      dataOverview(period).then(function (data) {
         var badge = document.getElementById('live-badge');
         if (badge) {
           badge.textContent = data.live;
@@ -380,6 +412,16 @@
     if (pollTimer) clearInterval(pollTimer);
   }
 
-  if (localStorage.getItem(TOKEN_KEY)) showApp();
-  else showLogin();
+  showSetupHint();
+
+  if (useSupabase) {
+    sb.getSession().then(function (session) {
+      if (session) showApp();
+      else showLogin();
+    });
+  } else if (localStorage.getItem(TOKEN_KEY)) {
+    showApp();
+  } else {
+    showLogin();
+  }
 })();

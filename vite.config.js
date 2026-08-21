@@ -16,6 +16,10 @@ function copyFunnelStatic() {
       if (existsSync(assetsSrc)) {
         cpSync(assetsSrc, join(dist, 'assets'), { recursive: true });
       }
+      const adminSrc = join(process.cwd(), 'admin');
+      if (existsSync(adminSrc)) {
+        cpSync(adminSrc, join(dist, 'admin'), { recursive: true });
+      }
     },
   };
 }

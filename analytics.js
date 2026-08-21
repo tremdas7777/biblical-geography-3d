@@ -4,6 +4,8 @@
   if (apiBase === false) return;
   if (!apiBase) apiBase = '';
 
+  var useSupabase = !!(cfg.supabaseUrl && cfg.supabaseAnonKey);
+
   var SESSION_KEY = 'bg3d_sid';
   var sessionId = localStorage.getItem(SESSION_KEY);
   if (!sessionId) {
@@ -40,7 +42,33 @@
     };
   }
 
-  function track(eventType, step, payload) {
+  function trackSupabase(eventType, step, payload) {
+    var m = meta();
+    fetch(cfg.supabaseUrl.replace(/\/$/, '') + '/rest/v1/bg3d_events', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: cfg.supabaseAnonKey,
+        Authorization: 'Bearer ' + cfg.supabaseAnonKey,
+        Prefer: 'return=minimal'
+      },
+      body: JSON.stringify({
+        session_id: sessionId,
+        event_type: eventType,
+        step: step || null,
+        payload: payload || null,
+        lang: m.lang,
+        device: m.device,
+        referrer: m.referrer,
+        utm_source: m.utm_source,
+        utm_medium: m.utm_medium,
+        utm_campaign: m.utm_campaign
+      }),
+      keepalive: true
+    }).catch(function () { /* silent */ });
+  }
+
+  function trackNode(eventType, step, payload) {
     var body = {
       session_id: sessionId,
       event_type: eventType,
@@ -63,6 +91,16 @@
       body: JSON.stringify(body),
       keepalive: true
     }).catch(function () { /* silent */ });
+  }
+
+  function track(eventType, step, payload) {
+    if (useSupabase) trackSupabase(eventType, step, payload);
+    else if (apiBase !== false) trackNode(eventType, step, payload);
+  }
+
+  if (!useSupabase && apiBase === '' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+    /* Sem backend configurado em produção — tracking desligado */
+    return;
   }
 
   track('page_view', 'landing');
