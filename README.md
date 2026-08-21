@@ -52,6 +52,22 @@ analyticsApi: "https://bg3d-analytics.onrender.com"
 
 > O Lovable só serve HTML estático. O servidor Node roda separado (Render, Railway, VPS).
 
+### Admin no Lovable (recomendado — mesmo domínio)
+
+1. Lovable → **Settings → Cloud** → ative o backend
+2. SQL Editor → execute `supabase/schema.sql`
+3. **Auth → Users** → crie `admin@thebiblicalgeography.com` (ou o e-mail em `config.js`)
+4. Preencha em `config.js`:
+
+```js
+supabaseUrl: "https://SEU_PROJETO.supabase.co",
+supabaseAnonKey: "eyJ...",
+adminEmail: "admin@thebiblicalgeography.com"
+```
+
+5. `git push lovable main` → Publish
+6. **https://thebiblicalgeography.com/admin/** (senha = usuário Supabase Auth)
+
 Modo estático (sem analytics):
 
 ```bash
