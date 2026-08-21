@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Admin — Biblical Geography 3D</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Cinzel:wght@600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="admin.css" />
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<div id="login-screen" class="login-screen">
+  <form id="login-form" class="login-card">
+    <h1>Admin</h1>
+    <p>Biblical Geography 3D — Analytics</p>
+    <input type="password" id="login-password" placeholder="Senha" autocomplete="current-password" required />
+    <button type="submit">Entrar</button>
+    <p class="login-hint">Senha padrão: <code>admin123</code> (altere via <code>ADMIN_PASSWORD</code>)</p>
+  </form>
+</div>
+
+<div id="app" class="app hidden">
+  <aside class="sidebar">
+    <div class="brand">BG3D Admin</div>
+    <nav>
+      <button type="button" class="nav active" data-view="dashboard">Dashboard</button>
+      <button type="button" class="nav" data-view="live">Live View</button>
+      <button type="button" class="nav" data-view="funnel">Funil</button>
+      <button type="button" class="nav" data-view="carts">Carrinhos</button>
+    </nav>
+    <button type="button" id="logout-btn" class="logout">Sair</button>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div>
+        <h2 id="view-title">Dashboard</h2>
+        <p class="sub">Atualização automática a cada 10s</p>
+      </div>
+      <div class="period-tabs" id="period-tabs">
+        <button type="button" data-period="1h">1h</button>
+        <button type="button" data-period="today">Hoje</button>
+        <button type="button" data-period="24h" class="active">24h</button>
+        <button type="button" data-period="7d">7d</button>
+        <button type="button" data-period="30d">30d</button>
+        <button type="button" data-period="all">Tudo</button>
+      </div>
+    </header>
+
+    <section id="view-dashboard" class="view">
+      <div class="kpi-grid">
+        <div class="kpi live"><span class="kpi-label">Ao vivo agora</span><strong id="kpi-live">0</strong></div>
+        <div class="kpi"><span class="kpi-label">Visitas</span><strong id="kpi-sessions">0</strong></div>
+        <div class="kpi"><span class="kpi-label">Preview</span><strong id="kpi-preview">0</strong></div>
+        <div class="kpi"><span class="kpi-label">Oferta vista</span><strong id="kpi-offer">0</strong></div>
+        <div class="kpi"><span class="kpi-label">Checkouts</span><strong id="kpi-checkouts">0</strong></div>
+        <div class="kpi accent"><span class="kpi-label">Conversão</span><strong id="kpi-conversion">0%</strong></div>
+      </div>
+
+      <div class="grid-2">
+        <div class="panel">
+          <h3>Tráfego no tempo</h3>
+          <canvas id="chart-timeline"></canvas>
+        </div>
+        <div class="panel">
+          <h3>Funil rápido</h3>
+          <div id="funnel-mini" class="funnel-mini"></div>
+        </div>
+      </div>
+
+      <div class="grid-3">
+        <div class="panel"><h3>Idioma</h3><canvas id="chart-lang"></canvas></div>
+        <div class="panel"><h3>Dispositivo</h3><canvas id="chart-device"></canvas></div>
+        <div class="panel"><h3>Origem (UTM)</h3><div id="sources-list" class="sources-list"></div></div>
+      </div>
+
+      <div class="panel">
+        <h3>Eventos recentes</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Hora</th><th>Sessão</th><th>Evento</th><th>Etapa</th><th>Idioma</th><th>Device</th></tr></thead>
+            <tbody id="events-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section id="view-live" class="view hidden">
+      <div class="panel">
+        <h3>Visitantes ativos <span class="badge-live">LIVE</span></h3>
+        <p class="hint">Sessões com atividade nos últimos 5 minutos</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Status</th><th>Sessão</th><th>Seção atual</th><th>Scroll</th><th>Idioma</th><th>Device</th><th>Funil</th><th>Última atividade</th></tr></thead>
+            <tbody id="live-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section id="view-funnel" class="view hidden">
+      <div class="panel">
+        <h3>Funil completo</h3>
+        <canvas id="chart-funnel"></canvas>
+        <div id="funnel-detail" class="funnel-detail"></div>
+      </div>
+    </section>
+
+    <section id="view-carts" class="view hidden">
+      <div class="kpi-grid compact">
+        <div class="kpi accent"><span class="kpi-label">Carrinhos (checkout clicado)</span><strong id="kpi-carts">0</strong></div>
+      </div>
+      <div class="panel">
+        <h3>Carrinhos / intenção de compra</h3>
+        <p class="hint">Leads que clicaram no botão de checkout (KashPay)</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Checkout em</th><th>Sessão</th><th>Idioma</th><th>Device</th><th>Origem</th><th>Campanha</th><th>Última atividade</th></tr></thead>
+            <tbody id="carts-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script src="admin.js"></script>
+</body>
+</html>

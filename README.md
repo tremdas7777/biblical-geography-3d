@@ -2,14 +2,38 @@
 
 Clone estatico do funil `biblical-geography-3d-v3.vercel.app`.
 
-## Rodar local
+## Rodar local (com analytics + admin)
 
 ```bash
-cd biblical-geography-3d
-python3 -m http.server 8090
+cd biblical-geography-3d/server
+npm install
+npm start
 ```
 
-Abra http://localhost:8090
+- Landing: http://localhost:8090
+- **Admin:** http://localhost:8090/admin/ (senha padrão `admin123`)
+
+Defina uma senha segura:
+
+```bash
+ADMIN_PASSWORD=sua_senha npm start
+```
+
+### Painel admin
+
+- **Live View** — visitantes online nos últimos 5 min
+- **Funil** — visita → engajamento → preview → oferta → checkout
+- **Carrinhos** — leads que clicaram no botão de compra (KashPay)
+- **Períodos** — 1h, hoje, 24h, 7d, 30d, tudo
+- Gráficos de tráfego, idioma, dispositivo e origem UTM
+
+> GitHub Pages serve só arquivos estáticos. Para analytics funcionar em produção, hospede o `/server` (Render, Railway, VPS) e configure `analyticsApi` em `config.js`.
+
+Modo estático (sem analytics):
+
+```bash
+python3 -m http.server 8090
+```
 
 ## Idiomas (EN / ES)
 
@@ -42,6 +66,9 @@ seus, as vendas e o rastreamento iriam para o dono da oferta original.
 
 ```
 index.html     landing completa (EN/ES)
+analytics.js   tracking do funil (visitas, scroll, checkout)
+admin/         painel admin (live, funil, carrinhos)
+server/        API Node + SQLite
 styles.css     estilos originais
 script.js      countdown, FAQ, checkout, pixels
 i18n.js        traducoes EN/ES + seletor de idioma

@@ -15,5 +15,9 @@ window.FUNNEL_CONFIG = {
   gtagId: "",        // ex.: "G-XXXXXXXXXX"
 
   // Contagem regressiva da oferta, em horas
-  countdownHours: 24
+  countdownHours: 24,
+
+  // API de analytics (vazio = mesmo dominio quando usar `npm start` no /server)
+  // Em GitHub Pages, aponte para seu servidor: "https://seu-api.onrender.com"
+  analyticsApi: ""
 };
