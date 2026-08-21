@@ -65,7 +65,7 @@ function copyFunnelStatic() {
 
 export default defineConfig({
   root: '.',
-  publicDir: false,
+  publicDir: 'public',
   server: { port: 8080, host: true },
   build: {
     outDir: 'dist',

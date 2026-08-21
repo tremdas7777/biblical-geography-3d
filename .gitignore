@@ -4,5 +4,6 @@
 .env.*
 node_modules/
 dist/
+public/
 server/data/
 server/.env
