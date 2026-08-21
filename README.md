@@ -21,13 +21,36 @@ ADMIN_PASSWORD=sua_senha npm start
 
 ### Painel admin
 
-- **Live View** — visitantes online nos últimos 5 min
-- **Funil** — visita → engajamento → preview → oferta → checkout
-- **Carrinhos** — leads que clicaram no botão de compra (KashPay)
-- **Períodos** — 1h, hoje, 24h, 7d, 30d, tudo
-- Gráficos de tráfego, idioma, dispositivo e origem UTM
+Acesse **http://localhost:8090/admin/** (senha padrão `admin123`).
 
-> GitHub Pages serve só arquivos estáticos. Para analytics funcionar em produção, hospede o `/server` (Render, Railway, VPS) e configure `analyticsApi` em `config.js`.
+| Aba | O que mostra |
+|-----|----------------|
+| **Dashboard** | KPIs, tráfego no tempo, funil rápido, idioma/device/UTM, eventos |
+| **Live View** | Visitantes online agora, seção atual, scroll, funil em tempo real (5s) |
+| **Análises** | Profundidade de scroll, tipos de evento, CTAs mais clicados |
+| **Funil** | Visita → engajamento → preview → oferta → checkout |
+| **Sessões** | Todas as sessões do período selecionado |
+| **Carrinhos** | Leads que clicaram no checkout KashPay |
+
+**Períodos:** 1h · Hoje · 24h · 7d · 30d · Tudo
+
+### Publicar admin + analytics online (Render)
+
+1. Crie conta em [render.com](https://render.com)
+2. **New → Web Service** → repo `biblical-geography-3d`
+3. **Root Directory:** `server`
+4. **Build:** `npm install` · **Start:** `npm start`
+5. Defina `ADMIN_PASSWORD` nas variáveis de ambiente
+6. Após deploy, copie a URL (ex.: `https://bg3d-analytics.onrender.com`)
+7. Em `config.js` da landing:
+
+```js
+analyticsApi: "https://bg3d-analytics.onrender.com"
+```
+
+8. Admin online: `https://bg3d-analytics.onrender.com/admin/`
+
+> O Lovable só serve HTML estático. O servidor Node roda separado (Render, Railway, VPS).
 
 Modo estático (sem analytics):
 

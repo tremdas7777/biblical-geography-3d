@@ -25,8 +25,10 @@ body { font-family: Inter, system-ui, sans-serif; background: var(--bg); color: 
 .app { display: grid; grid-template-columns: 220px 1fr; min-height: 100vh; }
 .sidebar { background: var(--panel); border-right: 1px solid var(--border); padding: 24px 16px; display: flex; flex-direction: column; }
 .brand { font-family: Cinzel, serif; color: var(--gold); font-size: 1.1rem; margin-bottom: 32px; padding: 0 8px; }
-.nav { display: block; width: 100%; text-align: left; padding: 12px 14px; margin-bottom: 6px; border: none; border-radius: 8px; background: none; color: var(--muted); cursor: pointer; font-size: 0.92rem; }
+.nav { display: flex; align-items: center; width: 100%; text-align: left; padding: 12px 14px; margin-bottom: 6px; border: none; border-radius: 8px; background: none; color: var(--muted); cursor: pointer; font-size: 0.92rem; }
 .nav:hover, .nav.active { background: var(--gold-dim); color: var(--text); }
+.nav-badge { margin-left: auto; font-size: 0.68rem; padding: 2px 7px; border-radius: 999px; background: var(--bg); color: var(--muted); }
+.nav-badge.on { background: rgba(34, 197, 94, 0.2); color: var(--live); }
 .logout { margin-top: auto; padding: 10px 14px; border: 1px solid var(--border); border-radius: 8px; background: none; color: var(--muted); cursor: pointer; }
 
 .main { padding: 24px 28px; overflow-x: hidden; }
@@ -73,6 +75,8 @@ td code { font-size: 0.75rem; background: var(--bg); padding: 2px 6px; border-ra
 .funnel-tags { display: flex; gap: 4px; flex-wrap: wrap; }
 .tag { font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; background: var(--bg); color: var(--muted); }
 .tag.on { background: var(--gold-dim); color: var(--gold); }
+
+.table-live { max-height: 420px; overflow-y: auto; }
 
 @media (max-width: 1000px) {
   .app { grid-template-columns: 1fr; }

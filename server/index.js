@@ -10,9 +10,14 @@ import {
   getFunnel,
   getTimeline,
   getLiveSessions,
+  getLiveStats,
   getCarts,
   getBreakdown,
-  getRecentEvents
+  getRecentEvents,
+  getEventStats,
+  getScrollStats,
+  getSessions,
+  getCtaStats
 } from './db.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -85,7 +90,24 @@ app.get('/api/admin/timeline', auth, function (req, res) {
 });
 
 app.get('/api/admin/live', auth, function (req, res) {
-  res.json(getLiveSessions());
+  res.json({
+    sessions: getLiveSessions(),
+    stats: getLiveStats()
+  });
+});
+
+app.get('/api/admin/analytics', auth, function (req, res) {
+  const since = periodToMs(req.query.period || '24h');
+  res.json({
+    events: getEventStats(since),
+    scroll: getScrollStats(since),
+    ctas: getCtaStats(since)
+  });
+});
+
+app.get('/api/admin/sessions', auth, function (req, res) {
+  const since = periodToMs(req.query.period || '24h');
+  res.json(getSessions(since, Number(req.query.limit) || 100));
 });
 
 app.get('/api/admin/carts', auth, function (req, res) {

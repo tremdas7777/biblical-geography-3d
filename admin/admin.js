@@ -4,6 +4,26 @@
   var view = 'dashboard';
   var charts = {};
   var pollTimer;
+  var pollMs = 10000;
+
+  var VIEW_TITLES = {
+    dashboard: 'Dashboard',
+    live: 'Live View',
+    analytics: 'Análises',
+    funnel: 'Funil',
+    sessions: 'Sessões',
+    carts: 'Carrinhos'
+  };
+
+  var EVENT_LABELS = {
+    page_view: 'Visita',
+    scroll_depth: 'Scroll',
+    section_view: 'Seção vista',
+    checkout_click: 'Checkout',
+    cta_click: 'CTA',
+    language_change: 'Idioma',
+    heartbeat: 'Heartbeat'
+  };
 
   function api(path) {
     var token = localStorage.getItem(TOKEN_KEY);
@@ -35,6 +55,10 @@
     return id ? id.slice(-8) : '—';
   }
 
+  function yesNo(v) {
+    return v ? '<span class="tag on">sim</span>' : '<span class="tag">—</span>';
+  }
+
   function showLogin() {
     document.getElementById('login-screen').classList.remove('hidden');
     document.getElementById('app').classList.add('hidden');
@@ -44,7 +68,7 @@
   function showApp() {
     document.getElementById('login-screen').classList.add('hidden');
     document.getElementById('app').classList.remove('hidden');
-    startPoll();
+    setPollInterval();
     refresh();
   }
 
@@ -79,8 +103,9 @@
       btn.classList.add('active');
       document.querySelectorAll('.view').forEach(function (v) { v.classList.add('hidden'); });
       document.getElementById('view-' + view).classList.remove('hidden');
-      var titles = { dashboard: 'Dashboard', live: 'Live View', funnel: 'Funil', carts: 'Carrinhos' };
-      document.getElementById('view-title').textContent = titles[view] || 'Admin';
+      document.getElementById('view-title').textContent = VIEW_TITLES[view] || 'Admin';
+      updatePeriodVisibility();
+      setPollInterval();
       refresh();
     });
   });
@@ -93,6 +118,28 @@
     btn.classList.add('active');
     refresh();
   });
+
+  function updatePeriodVisibility() {
+    var tabs = document.getElementById('period-tabs');
+    var sub = document.getElementById('view-sub');
+    if (view === 'live') {
+      tabs.classList.add('hidden');
+      sub.textContent = 'Tempo real · atualiza a cada 5s';
+    } else {
+      tabs.classList.remove('hidden');
+      sub.textContent = 'Período: ' + periodLabel(period) + ' · atualiza a cada 10s';
+    }
+  }
+
+  function periodLabel(p) {
+    var map = { '1h': '1 hora', today: 'Hoje', '24h': '24 horas', '7d': '7 dias', '30d': '30 dias', all: 'Tudo' };
+    return map[p] || p;
+  }
+
+  function setPollInterval() {
+    pollMs = view === 'live' ? 5000 : 10000;
+    startPoll();
+  }
 
   function renderFunnelRows(container, funnel, maxCount) {
     container.innerHTML = '';
@@ -120,118 +167,213 @@
       options: Object.assign({
         responsive: true,
         plugins: { legend: { labels: { color: '#94a3b8' } } },
-        scales: type !== 'doughnut' && type !== 'bar' ? {
-          x: { ticks: { color: '#94a3b8' }, grid: { color: '#1e293b' } },
+        scales: type !== 'doughnut' && type !== 'bar' && type !== 'pie' ? {
+          x: { ticks: { color: '#94a3b8', maxRotation: 45 }, grid: { color: '#1e293b' } },
           y: { ticks: { color: '#94a3b8' }, grid: { color: '#1e293b' }, beginAtZero: true }
-        } : {}
+        } : (type === 'bar' ? {
+          x: { ticks: { color: '#94a3b8' }, grid: { color: '#1e293b' }, beginAtZero: true },
+          y: { ticks: { color: '#94a3b8', font: { size: 11 } }, grid: { display: false } }
+        } : {})
       }, options || {})
     });
   }
 
-  function refresh() {
+  function refreshOverview() {
+    var q = '?period=' + encodeURIComponent(period);
+    return api('/api/admin/overview' + q).then(function (data) {
+      document.getElementById('kpi-live').textContent = data.live;
+      document.getElementById('kpi-sessions').textContent = data.sessions;
+      document.getElementById('kpi-engaged').textContent = data.engaged + ' (' + data.engagementRate + '%)';
+      document.getElementById('kpi-preview').textContent = data.preview;
+      document.getElementById('kpi-offer').textContent = data.offer;
+      document.getElementById('kpi-checkouts').textContent = data.checkouts;
+      document.getElementById('kpi-scroll').textContent = data.avgScroll + '%';
+      document.getElementById('kpi-conversion').textContent = data.conversion + '%';
+      document.getElementById('kpi-carts').textContent = data.carts;
+      var badge = document.getElementById('live-badge');
+      if (badge) {
+        badge.textContent = data.live;
+        badge.classList.toggle('on', data.live > 0);
+      }
+    });
+  }
+
+  function refreshDashboard() {
     var q = '?period=' + encodeURIComponent(period);
 
-    if (view === 'dashboard' || view === 'funnel' || view === 'carts') {
-      api('/api/admin/overview' + q).then(function (data) {
-        document.getElementById('kpi-live').textContent = data.live;
-        document.getElementById('kpi-sessions').textContent = data.sessions;
-        document.getElementById('kpi-preview').textContent = data.preview;
-        document.getElementById('kpi-offer').textContent = data.offer;
-        document.getElementById('kpi-checkouts').textContent = data.checkouts;
-        document.getElementById('kpi-conversion').textContent = data.conversion + '%';
-        document.getElementById('kpi-carts').textContent = data.carts;
-      });
-    }
+    refreshOverview();
 
-    if (view === 'dashboard') {
-      api('/api/admin/funnel' + q).then(function (funnel) {
-        renderFunnelRows(document.getElementById('funnel-mini'), funnel);
-      });
+    api('/api/admin/funnel' + q).then(function (funnel) {
+      renderFunnelRows(document.getElementById('funnel-mini'), funnel);
+    });
 
-      api('/api/admin/timeline' + q).then(function (rows) {
-        var buckets = {};
-        rows.forEach(function (r) {
-          if (!buckets[r.bucket]) buckets[r.bucket] = { page_view: 0, checkout_click: 0, section_view: 0 };
-          if (r.event_type === 'page_view') buckets[r.bucket].page_view += r.c;
-          if (r.event_type === 'checkout_click') buckets[r.bucket].checkout_click += r.c;
-          if (r.event_type === 'section_view') buckets[r.bucket].section_view += r.c;
-        });
-        var keys = Object.keys(buckets).sort(function (a, b) { return a - b; });
-        var labels = keys.map(function (k) { return fmtTime(Number(k)); });
-        upsertChart('chart-timeline', 'line', labels, [
-          { label: 'Visitas', data: keys.map(function (k) { return buckets[k].page_view; }), borderColor: '#3b82f6', tension: 0.3 },
-          { label: 'Seções', data: keys.map(function (k) { return buckets[k].section_view; }), borderColor: '#c99a4c', tension: 0.3 },
-          { label: 'Checkouts', data: keys.map(function (k) { return buckets[k].checkout_click; }), borderColor: '#22c55e', tension: 0.3 }
-        ]);
+    api('/api/admin/timeline' + q).then(function (rows) {
+      var buckets = {};
+      rows.forEach(function (r) {
+        if (!buckets[r.bucket]) buckets[r.bucket] = { page_view: 0, checkout_click: 0, section_view: 0 };
+        if (r.event_type === 'page_view') buckets[r.bucket].page_view += r.c;
+        if (r.event_type === 'checkout_click') buckets[r.bucket].checkout_click += r.c;
+        if (r.event_type === 'section_view') buckets[r.bucket].section_view += r.c;
       });
+      var keys = Object.keys(buckets).sort(function (a, b) { return a - b; });
+      var labels = keys.map(function (k) { return fmtTime(Number(k)); });
+      upsertChart('chart-timeline', 'line', labels, [
+        { label: 'Visitas', data: keys.map(function (k) { return buckets[k].page_view; }), borderColor: '#3b82f6', tension: 0.3 },
+        { label: 'Seções', data: keys.map(function (k) { return buckets[k].section_view; }), borderColor: '#c99a4c', tension: 0.3 },
+        { label: 'Checkouts', data: keys.map(function (k) { return buckets[k].checkout_click; }), borderColor: '#22c55e', tension: 0.3 }
+      ]);
+    });
 
-      api('/api/admin/breakdown' + q).then(function (data) {
-        upsertChart('chart-lang', 'doughnut', data.langs.map(function (l) { return l.lang || '?'; }), [{
-          data: data.langs.map(function (l) { return l.c; }),
-          backgroundColor: ['#c99a4c', '#3b82f6', '#22c55e', '#a855f7']
-        }]);
-        upsertChart('chart-device', 'doughnut', data.devices.map(function (d) { return d.device; }), [{
-          data: data.devices.map(function (d) { return d.c; }),
-          backgroundColor: ['#6366f1', '#14b8a6', '#f59e0b']
-        }]);
-        var sl = document.getElementById('sources-list');
-        sl.innerHTML = data.sources.map(function (s) {
-          return '<div class="source-row"><span>' + s.source + '</span><strong>' + s.c + '</strong></div>';
-        }).join('') || '<p class="hint">Sem dados de origem</p>';
-      });
+    api('/api/admin/breakdown' + q).then(function (data) {
+      upsertChart('chart-lang', 'doughnut', data.langs.map(function (l) { return l.lang || '?'; }), [{
+        data: data.langs.map(function (l) { return l.c; }),
+        backgroundColor: ['#c99a4c', '#3b82f6', '#22c55e', '#a855f7']
+      }]);
+      upsertChart('chart-device', 'doughnut', data.devices.map(function (d) { return d.device; }), [{
+        data: data.devices.map(function (d) { return d.c; }),
+        backgroundColor: ['#6366f1', '#14b8a6', '#f59e0b']
+      }]);
+      var sl = document.getElementById('sources-list');
+      sl.innerHTML = data.sources.map(function (s) {
+        return '<div class="source-row"><span>' + s.source + '</span><strong>' + s.c + '</strong></div>';
+      }).join('') || '<p class="hint">Sem dados de origem</p>';
+    });
 
-      api('/api/admin/events?limit=30').then(function (events) {
-        document.getElementById('events-body').innerHTML = events.map(function (e) {
-          return '<tr><td>' + fmtTime(e.created_at) + '</td><td><code>' + shortId(e.session_id) + '</code></td><td>' + e.event_type + '</td><td>' + (e.step || '—') + '</td><td>' + (e.lang || '—') + '</td><td>' + (e.device || '—') + '</td></tr>';
-        }).join('');
-      });
-    }
+    api('/api/admin/events?limit=30').then(function (events) {
+      document.getElementById('events-body').innerHTML = events.map(function (e) {
+        return '<tr><td>' + fmtTime(e.created_at) + '</td><td><code>' + shortId(e.session_id) + '</code></td><td>' + (EVENT_LABELS[e.event_type] || e.event_type) + '</td><td>' + (e.step || '—') + '</td><td>' + (e.lang || '—') + '</td><td>' + (e.device || '—') + '</td></tr>';
+      }).join('');
+    });
+  }
 
-    if (view === 'live') {
-      api('/api/admin/live').then(function (sessions) {
-        document.getElementById('live-body').innerHTML = sessions.map(function (s) {
-          var tags = [
-            s.reached_preview ? 'preview' : null,
-            s.reached_offer ? 'offer' : null,
-            s.reached_checkout ? 'checkout' : null
-          ].filter(Boolean).map(function (t) {
-            return '<span class="tag on">' + t + '</span>';
-          }).join('') || '<span class="tag">topo</span>';
-          return '<tr><td><span class="status-dot"></span>online</td><td><code>' + shortId(s.session_id) + '</code></td><td>' + (s.current_section || '—') + '</td><td>' + (s.max_scroll || 0) + '%</td><td>' + (s.lang || '—') + '</td><td>' + (s.device || '—') + '</td><td><div class="funnel-tags">' + tags + '</div></td><td>' + fmtAgo(s.last_seen) + '</td></tr>';
-        }).join('') || '<tr><td colspan="8">Nenhum visitante ativo</td></tr>';
-      });
-    }
+  function refreshLive() {
+    api('/api/admin/live').then(function (data) {
+      var sessions = data.sessions || [];
+      var stats = data.stats || {};
 
-    if (view === 'funnel') {
-      api('/api/admin/funnel' + q).then(function (funnel) {
-        renderFunnelRows(document.getElementById('funnel-detail'), funnel);
-        upsertChart('chart-funnel', 'bar', funnel.map(function (f) { return f.label; }), [{
-          label: 'Leads',
-          data: funnel.map(function (f) { return f.count; }),
+      document.getElementById('live-kpi-online').textContent = stats.online || 0;
+      document.getElementById('live-kpi-offer').textContent = stats.onOffer || 0;
+      document.getElementById('live-kpi-checkout').textContent = stats.onCheckout || 0;
+
+      var badge = document.getElementById('live-badge');
+      if (badge) {
+        badge.textContent = stats.online || 0;
+        badge.classList.toggle('on', (stats.online || 0) > 0);
+      }
+      document.getElementById('kpi-live').textContent = stats.online || 0;
+
+      var sections = stats.bySection || [];
+      upsertChart('chart-live-sections', 'doughnut',
+        sections.map(function (s) { return s.section; }),
+        [{
+          data: sections.map(function (s) { return s.c; }),
+          backgroundColor: ['#3b82f6', '#c99a4c', '#22c55e', '#a855f7', '#6366f1', '#14b8a6']
+        }],
+        { plugins: { legend: { position: 'bottom', labels: { color: '#94a3b8', boxWidth: 12 } } } }
+      );
+
+      document.getElementById('live-body').innerHTML = sessions.map(function (s) {
+        var tags = [
+          s.reached_preview ? 'preview' : null,
+          s.reached_offer ? 'offer' : null,
+          s.reached_checkout ? 'checkout' : null
+        ].filter(Boolean).map(function (t) {
+          return '<span class="tag on">' + t + '</span>';
+        }).join('') || '<span class="tag">topo</span>';
+        return '<tr><td><span class="status-dot"></span>online</td><td><code>' + shortId(s.session_id) + '</code></td><td>' + (s.current_section || '—') + '</td><td>' + (s.max_scroll || 0) + '%</td><td>' + (s.lang || '—') + '</td><td>' + (s.device || '—') + '</td><td><div class="funnel-tags">' + tags + '</div></td><td>' + fmtAgo(s.last_seen) + '</td></tr>';
+      }).join('') || '<tr><td colspan="8">Nenhum visitante ativo no momento</td></tr>';
+    });
+  }
+
+  function refreshAnalytics() {
+    var q = '?period=' + encodeURIComponent(period);
+    api('/api/admin/analytics' + q).then(function (data) {
+      var scroll = data.scroll || [];
+      upsertChart('chart-scroll', 'bar',
+        scroll.map(function (s) { return s.mark + '%'; }),
+        [{
+          label: 'Sessões',
+          data: scroll.map(function (s) { return s.count; }),
           backgroundColor: '#c99a4c'
-        }], {
-          indexAxis: 'y',
-          plugins: { legend: { display: false } },
-          scales: {
-            x: { ticks: { color: '#94a3b8' }, grid: { color: '#1e293b' } },
-            y: { ticks: { color: '#94a3b8', font: { size: 11 } }, grid: { display: false } }
-          }
-        });
-      });
-    }
+        }]
+      );
 
-    if (view === 'carts') {
-      api('/api/admin/carts' + q).then(function (carts) {
-        document.getElementById('carts-body').innerHTML = carts.map(function (c) {
-          return '<tr><td>' + fmtTime(c.checkout_at) + '</td><td><code>' + shortId(c.session_id) + '</code></td><td>' + (c.lang || '—') + '</td><td>' + (c.device || '—') + '</td><td>' + (c.utm_source || c.referrer || 'direct') + '</td><td>' + (c.utm_campaign || '—') + '</td><td>' + fmtAgo(c.last_seen) + '</td></tr>';
-        }).join('') || '<tr><td colspan="7">Nenhum carrinho no período</td></tr>';
+      var events = data.events || [];
+      upsertChart('chart-events', 'bar',
+        events.map(function (e) { return EVENT_LABELS[e.event_type] || e.event_type; }),
+        [{
+          label: 'Total',
+          data: events.map(function (e) { return e.c; }),
+          backgroundColor: '#3b82f6'
+        }],
+        { indexAxis: 'y', plugins: { legend: { display: false } } }
+      );
+
+      var ctas = data.ctas || [];
+      document.getElementById('cta-list').innerHTML = ctas.map(function (c) {
+        return '<div class="source-row"><span>' + (c.cta || '—') + '</span><strong>' + c.c + '</strong></div>';
+      }).join('') || '<p class="hint">Sem cliques em CTAs no período</p>';
+    });
+  }
+
+  function refreshFunnel() {
+    var q = '?period=' + encodeURIComponent(period);
+    refreshOverview();
+    api('/api/admin/funnel' + q).then(function (funnel) {
+      renderFunnelRows(document.getElementById('funnel-detail'), funnel);
+      upsertChart('chart-funnel', 'bar', funnel.map(function (f) { return f.label; }), [{
+        label: 'Leads',
+        data: funnel.map(function (f) { return f.count; }),
+        backgroundColor: '#c99a4c'
+      }], {
+        indexAxis: 'y',
+        plugins: { legend: { display: false } }
       });
+    });
+  }
+
+  function refreshSessions() {
+    var q = '?period=' + encodeURIComponent(period);
+    api('/api/admin/sessions' + q).then(function (sessions) {
+      document.getElementById('sessions-body').innerHTML = sessions.map(function (s) {
+        return '<tr><td>' + fmtTime(s.first_seen) + '</td><td><code>' + shortId(s.session_id) + '</code></td><td>' + (s.lang || '—') + '</td><td>' + (s.device || '—') + '</td><td>' + (s.max_scroll || 0) + '%</td><td>' + yesNo(s.reached_preview) + '</td><td>' + yesNo(s.reached_offer) + '</td><td>' + yesNo(s.reached_checkout) + '</td><td>' + (s.utm_source || s.referrer || 'direct') + '</td><td>' + fmtAgo(s.last_seen) + '</td></tr>';
+      }).join('') || '<tr><td colspan="10">Nenhuma sessão no período</td></tr>';
+    });
+  }
+
+  function refreshCarts() {
+    var q = '?period=' + encodeURIComponent(period);
+    refreshOverview();
+    api('/api/admin/carts' + q).then(function (carts) {
+      document.getElementById('carts-body').innerHTML = carts.map(function (c) {
+        return '<tr><td>' + fmtTime(c.checkout_at) + '</td><td><code>' + shortId(c.session_id) + '</code></td><td>' + (c.lang || '—') + '</td><td>' + (c.device || '—') + '</td><td>' + (c.utm_source || c.referrer || 'direct') + '</td><td>' + (c.utm_campaign || '—') + '</td><td>' + fmtAgo(c.last_seen) + '</td></tr>';
+      }).join('') || '<tr><td colspan="7">Nenhum carrinho no período</td></tr>';
+    });
+  }
+
+  function refresh() {
+    updatePeriodVisibility();
+    if (view === 'dashboard') refreshDashboard();
+    else if (view === 'live') refreshLive();
+    else if (view === 'analytics') refreshAnalytics();
+    else if (view === 'funnel') refreshFunnel();
+    else if (view === 'sessions') refreshSessions();
+    else if (view === 'carts') refreshCarts();
+
+    if (view !== 'dashboard' && view !== 'live') {
+      api('/api/admin/overview?period=' + encodeURIComponent(period)).then(function (data) {
+        var badge = document.getElementById('live-badge');
+        if (badge) {
+          badge.textContent = data.live;
+          badge.classList.toggle('on', data.live > 0);
+        }
+      }).catch(function () {});
     }
   }
 
   function startPoll() {
     stopPoll();
-    pollTimer = setInterval(refresh, 10000);
+    pollTimer = setInterval(refresh, pollMs);
   }
 
   function stopPoll() {

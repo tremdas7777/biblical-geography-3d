@@ -157,7 +157,7 @@ export function getOverview(since) {
 
   const live = db.prepare(`
     SELECT COUNT(*) AS c FROM sessions WHERE last_seen >= ?
-  `).get(Date.now() - 180000).c;
+  `).get(Date.now() - 300000).c;
 
   const checkouts = db.prepare(`
     SELECT COUNT(*) AS c FROM sessions WHERE checkout_at >= ?
@@ -175,9 +175,18 @@ export function getOverview(since) {
     SELECT COUNT(*) AS c FROM sessions WHERE checkout_at >= ? AND reached_checkout = 1
   `).get(since).c;
 
-  const conversion = sessions ? ((checkouts / sessions) * 100).toFixed(1) : '0.0';
+  const engaged = db.prepare(`
+    SELECT COUNT(*) AS c FROM sessions WHERE first_seen >= ? AND max_scroll >= 25
+  `).get(since).c;
 
-  return { sessions, live, checkouts, preview, offer, carts, conversion };
+  const avgScroll = db.prepare(`
+    SELECT ROUND(AVG(max_scroll), 1) AS v FROM sessions WHERE first_seen >= ?
+  `).get(since).v || 0;
+
+  const conversion = sessions ? ((checkouts / sessions) * 100).toFixed(1) : '0.0';
+  const engagementRate = sessions ? ((engaged / sessions) * 100).toFixed(1) : '0.0';
+
+  return { sessions, live, checkouts, preview, offer, carts, conversion, engaged, avgScroll, engagementRate };
 }
 
 export function getFunnel(since) {
@@ -267,6 +276,73 @@ export function getRecentEvents(limit) {
     SELECT session_id, event_type, step, lang, device, created_at
     FROM events ORDER BY created_at DESC LIMIT ?
   `).all(limit || 30);
+}
+
+export function getLiveStats() {
+  const online = db.prepare(`
+    SELECT COUNT(*) AS c FROM sessions WHERE last_seen >= ?
+  `).get(Date.now() - 300000).c;
+
+  const bySection = db.prepare(`
+    SELECT COALESCE(current_section, 'landing') AS section, COUNT(*) AS c
+    FROM sessions
+    WHERE last_seen >= ?
+    GROUP BY section
+    ORDER BY c DESC
+  `).all(Date.now() - 300000);
+
+  const onOffer = db.prepare(`
+    SELECT COUNT(*) AS c FROM sessions WHERE last_seen >= ? AND reached_offer = 1
+  `).get(Date.now() - 300000).c;
+
+  const onCheckout = db.prepare(`
+    SELECT COUNT(*) AS c FROM sessions WHERE last_seen >= ? AND reached_checkout = 1
+  `).get(Date.now() - 300000).c;
+
+  return { online, bySection, onOffer, onCheckout };
+}
+
+export function getEventStats(since) {
+  return db.prepare(`
+    SELECT event_type, COUNT(*) AS c
+    FROM events
+    WHERE created_at >= ?
+    GROUP BY event_type
+    ORDER BY c DESC
+  `).all(since);
+}
+
+export function getScrollStats(since) {
+  const marks = [25, 50, 75, 100];
+  return marks.map(function (mark) {
+    const count = db.prepare(`
+      SELECT COUNT(*) AS c FROM sessions WHERE first_seen >= ? AND max_scroll >= ?
+    `).get(since, mark).c;
+    return { mark, count };
+  });
+}
+
+export function getSessions(since, limit) {
+  return db.prepare(`
+    SELECT session_id, lang, device, referrer, utm_source, utm_campaign,
+           max_scroll, reached_preview, reached_offer, reached_checkout,
+           checkout_at, current_section, first_seen, last_seen, page_views
+    FROM sessions
+    WHERE first_seen >= ?
+    ORDER BY last_seen DESC
+    LIMIT ?
+  `).all(since, limit || 100);
+}
+
+export function getCtaStats(since) {
+  return db.prepare(`
+    SELECT step AS cta, COUNT(*) AS c
+    FROM events
+    WHERE created_at >= ? AND event_type = 'cta_click'
+    GROUP BY step
+    ORDER BY c DESC
+    LIMIT 12
+  `).all(since);
 }
 
 export { db };

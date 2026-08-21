@@ -14,7 +14,7 @@
 <div id="login-screen" class="login-screen">
   <form id="login-form" class="login-card">
     <h1>Admin</h1>
-    <p>Biblical Geography 3D — Analytics</p>
+    <p>Biblical Geography 3D — Analytics & Live View</p>
     <input type="password" id="login-password" placeholder="Senha" autocomplete="current-password" required />
     <button type="submit">Entrar</button>
     <p class="login-hint">Senha padrão: <code>admin123</code> (altere via <code>ADMIN_PASSWORD</code>)</p>
@@ -26,8 +26,10 @@
     <div class="brand">BG3D Admin</div>
     <nav>
       <button type="button" class="nav active" data-view="dashboard">Dashboard</button>
-      <button type="button" class="nav" data-view="live">Live View</button>
+      <button type="button" class="nav" data-view="live">Live View <span id="live-badge" class="nav-badge">0</span></button>
+      <button type="button" class="nav" data-view="analytics">Análises</button>
       <button type="button" class="nav" data-view="funnel">Funil</button>
+      <button type="button" class="nav" data-view="sessions">Sessões</button>
       <button type="button" class="nav" data-view="carts">Carrinhos</button>
     </nav>
     <button type="button" id="logout-btn" class="logout">Sair</button>
@@ -37,7 +39,7 @@
     <header class="topbar">
       <div>
         <h2 id="view-title">Dashboard</h2>
-        <p class="sub">Atualização automática a cada 10s</p>
+        <p class="sub" id="view-sub">Atualização automática a cada 10s</p>
       </div>
       <div class="period-tabs" id="period-tabs">
         <button type="button" data-period="1h">1h</button>
@@ -53,9 +55,11 @@
       <div class="kpi-grid">
         <div class="kpi live"><span class="kpi-label">Ao vivo agora</span><strong id="kpi-live">0</strong></div>
         <div class="kpi"><span class="kpi-label">Visitas</span><strong id="kpi-sessions">0</strong></div>
+        <div class="kpi"><span class="kpi-label">Engajamento</span><strong id="kpi-engaged">0</strong></div>
         <div class="kpi"><span class="kpi-label">Preview</span><strong id="kpi-preview">0</strong></div>
         <div class="kpi"><span class="kpi-label">Oferta vista</span><strong id="kpi-offer">0</strong></div>
         <div class="kpi"><span class="kpi-label">Checkouts</span><strong id="kpi-checkouts">0</strong></div>
+        <div class="kpi"><span class="kpi-label">Scroll médio</span><strong id="kpi-scroll">0%</strong></div>
         <div class="kpi accent"><span class="kpi-label">Conversão</span><strong id="kpi-conversion">0%</strong></div>
       </div>
 
@@ -88,15 +92,43 @@
     </section>
 
     <section id="view-live" class="view hidden">
-      <div class="panel">
-        <h3>Visitantes ativos <span class="badge-live">LIVE</span></h3>
-        <p class="hint">Sessões com atividade nos últimos 5 minutos</p>
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>Status</th><th>Sessão</th><th>Seção atual</th><th>Scroll</th><th>Idioma</th><th>Device</th><th>Funil</th><th>Última atividade</th></tr></thead>
-            <tbody id="live-body"></tbody>
-          </table>
+      <div class="kpi-grid compact">
+        <div class="kpi live"><span class="kpi-label">Online agora</span><strong id="live-kpi-online">0</strong></div>
+        <div class="kpi"><span class="kpi-label">Na oferta</span><strong id="live-kpi-offer">0</strong></div>
+        <div class="kpi accent"><span class="kpi-label">Checkout clicado</span><strong id="live-kpi-checkout">0</strong></div>
+      </div>
+      <div class="grid-2">
+        <div class="panel">
+          <h3>Onde estão agora <span class="badge-live">LIVE</span></h3>
+          <canvas id="chart-live-sections"></canvas>
         </div>
+        <div class="panel">
+          <h3>Visitantes ativos</h3>
+          <p class="hint">Sessões com atividade nos últimos 5 minutos · atualiza a cada 5s</p>
+          <div class="table-wrap table-live">
+            <table>
+              <thead><tr><th>Status</th><th>Sessão</th><th>Seção</th><th>Scroll</th><th>Idioma</th><th>Device</th><th>Funil</th><th>Atividade</th></tr></thead>
+              <tbody id="live-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="view-analytics" class="view hidden">
+      <div class="grid-2">
+        <div class="panel">
+          <h3>Profundidade de scroll</h3>
+          <canvas id="chart-scroll"></canvas>
+        </div>
+        <div class="panel">
+          <h3>Tipos de evento</h3>
+          <canvas id="chart-events"></canvas>
+        </div>
+      </div>
+      <div class="panel">
+        <h3>CTAs mais clicados</h3>
+        <div id="cta-list" class="sources-list"></div>
       </div>
     </section>
 
@@ -105,6 +137,19 @@
         <h3>Funil completo</h3>
         <canvas id="chart-funnel"></canvas>
         <div id="funnel-detail" class="funnel-detail"></div>
+      </div>
+    </section>
+
+    <section id="view-sessions" class="view hidden">
+      <div class="panel">
+        <h3>Todas as sessões no período</h3>
+        <p class="hint">Últimas 100 sessões · ordenadas por atividade recente</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Entrada</th><th>Sessão</th><th>Idioma</th><th>Device</th><th>Scroll</th><th>Preview</th><th>Oferta</th><th>Checkout</th><th>Origem</th><th>Última atividade</th></tr></thead>
+            <tbody id="sessions-body"></tbody>
+          </table>
+        </div>
       </div>
     </section>
 
