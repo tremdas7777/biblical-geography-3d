@@ -115,7 +115,8 @@
 
     document.querySelectorAll('.section').forEach(function (el) {
       if (!el.id && !el.getAttribute('data-funnel-step')) {
-        el.setAttribute('data-funnel-step', el.querySelector('.eyebrow')?.textContent?.slice(0, 24) || 'section');
+        var eyebrow = el.querySelector('.eyebrow');
+        el.setAttribute('data-funnel-step', (eyebrow && eyebrow.textContent ? eyebrow.textContent.slice(0, 24) : 'section'));
       }
     });
   }

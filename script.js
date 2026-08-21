@@ -1,23 +1,26 @@
 (function () {
   var cfg = window.FUNNEL_CONFIG || {};
 
-  /* ---------- Checkout ---------- */
+  /* ---------- Checkout (fonte unica: config.checkoutUrl) ---------- */
   var checkoutLinks = Array.prototype.slice.call(document.querySelectorAll('[data-checkout]'));
   checkoutLinks.forEach(function (a) {
     if (cfg.checkoutUrl) {
       a.href = cfg.checkoutUrl;
-      a.setAttribute('rel', 'noopener');
-      a.addEventListener('click', function (ev) {
-        ev.preventDefault();
-        window.location.href = cfg.checkoutUrl;
-      });
+      a.setAttribute('rel', 'noopener noreferrer');
+      a.setAttribute('target', '_self');
     } else {
       a.href = '#offer';
       a.addEventListener('click', function (ev) {
-        ev.preventDefault();
-        var lang = window.getCurrentLang ? window.getCurrentLang() : 'en';
-        var msg = window.I18N && window.I18N[lang] && window.I18N[lang].checkoutAlert;
-        alert(msg || 'Checkout not configured.\n\nOpen config.js and set "checkoutUrl" to your product link.');
+        if (a.getAttribute('href') === '#offer') {
+          ev.preventDefault();
+          var offer = document.getElementById('offer');
+          if (offer) offer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          else {
+            var lang = window.getCurrentLang ? window.getCurrentLang() : 'en';
+            var msg = window.I18N && window.I18N[lang] && window.I18N[lang].checkoutAlert;
+            alert(msg || 'Checkout not configured.\n\nOpen config.js and set "checkoutUrl" to your product link.');
+          }
+        }
       });
     }
   });
@@ -46,24 +49,35 @@
   tick();
   setInterval(tick, 1000);
 
-  /* ---------- FAQ ---------- */
+  /* ---------- FAQ accordion ---------- */
+  function closeFaqItem(item) {
+    item.classList.remove('open');
+    var ans = item.querySelector('.faq-a');
+    if (ans) ans.style.maxHeight = '0px';
+  }
+
   document.querySelectorAll('.faq-item').forEach(function (item) {
     var q = item.querySelector('.faq-q');
-    if (!q) return;
+    var ans = item.querySelector('.faq-a');
+    if (!q || !ans) return;
+    q.setAttribute('type', 'button');
     q.addEventListener('click', function () {
       var isOpen = item.classList.contains('open');
-      document.querySelectorAll('.faq-item.open').forEach(function (i) {
-        i.classList.remove('open');
-      });
-      if (!isOpen) item.classList.add('open');
+      document.querySelectorAll('.faq-item.open').forEach(closeFaqItem);
+      if (!isOpen) {
+        item.classList.add('open');
+        ans.style.maxHeight = ans.scrollHeight + 'px';
+      }
     });
   });
 
-  /* ---------- Rolagem suave ---------- */
+  /* ---------- Rolagem suave (somente links internos #) ---------- */
   document.querySelectorAll('a[href^="#"]').forEach(function (a) {
+    if (a.hasAttribute('data-checkout')) return;
     a.addEventListener('click', function (ev) {
       var id = a.getAttribute('href').slice(1);
-      var target = id && document.getElementById(id);
+      if (!id) return;
+      var target = document.getElementById(id);
       if (!target) return;
       ev.preventDefault();
       target.scrollIntoView({ behavior: 'smooth', block: 'start' });
