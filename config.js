@@ -8,7 +8,7 @@
 window.FUNNEL_CONFIG = {
   // Link do seu checkout (Hotmart, Kiwify, Stripe, PayPal, Digistore24...)
   // Ex.: "https://pay.hotmart.com/SEU_PRODUTO?checkoutMode=10"
-  checkoutUrl: "",
+  checkoutUrl: "https://checkout.kashpay.com.br/checkout/checkout-1787280030198",
 
   // Pixels de rastreamento (deixe vazio para nao carregar)
   metaPixelId: "",   // ex.: "1234567890123456"
