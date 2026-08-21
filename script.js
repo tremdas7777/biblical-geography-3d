@@ -6,6 +6,11 @@
   checkoutLinks.forEach(function (a) {
     if (cfg.checkoutUrl) {
       a.href = cfg.checkoutUrl;
+      a.setAttribute('rel', 'noopener');
+      a.addEventListener('click', function (ev) {
+        ev.preventDefault();
+        window.location.href = cfg.checkoutUrl;
+      });
     } else {
       a.href = '#offer';
       a.addEventListener('click', function (ev) {
